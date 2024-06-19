@@ -17,7 +17,7 @@ const schema = a.schema({
   }).authorization(allow => [allow.authenticated()]),
   
 
-  ec2_list: a.query()
+  ec2List: a.query()
     .returns(a.ref('Ec2InstanceModel').array())
     .arguments({})
     .handler(a.handler.function(ec2_list))

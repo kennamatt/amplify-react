@@ -14,8 +14,7 @@ function App() {
   function getEc2Instances() {
     const client = generateClient<Schema>();
     const queries = client.queries; 
-    setErrMsg( JSON.stringify(queries) )
-    return queries.ec2_list({})
+    return queries.ec2List({})
   }
 
   useEffect(
