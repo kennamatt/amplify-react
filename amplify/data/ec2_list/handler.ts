@@ -4,7 +4,7 @@ import { type Schema } from '../resource'
 import { faker } from '@faker-js/faker';
 
 type Ec2InstanceModel = Schema['Ec2InstanceModel']['type']
-type FunctionHandler = Schema["ec2_list"]['functionHandler']
+type FunctionHandler = Schema["ec2List"]['functionHandler']
 
 enum States {
     Pending = "pending",
@@ -45,19 +45,19 @@ enum AZsForUSEast1 {
 // Faker code for now
 export const handler: FunctionHandler = async (_event, _context) => {
 
-    let list : Array<Ec2InstanceModel>  = []
+    let list: Array<Ec2InstanceModel> = []
 
     let count = faker.number.int({ min: 1, max: 20 })
-    for( let i = 0; i < count; i++) {
-        
-        let ec2Inst : Ec2InstanceModel = {
+    for (let i = 0; i < count; i++) {
+
+        let ec2Inst: Ec2InstanceModel = {
             createdAt: faker.date.recent().toString(),
             updatedAt: faker.date.soon().toString(),
             name: faker.word.noun() + ' ' + 'server',
             id: faker.string.alpha(1) + '-' + faker.string.alphanumeric(10),
             state: faker.helpers.enumValue(States).toString(),
             public_ip: faker.internet.ipv4(),
-            private_ips: [faker.internet.ipv4(),faker.internet.ipv4(),faker.internet.ipv4(),faker.internet.ipv4(),faker.internet.ipv4()],
+            private_ips: [faker.internet.ipv4(), faker.internet.ipv4(), faker.internet.ipv4(), faker.internet.ipv4(), faker.internet.ipv4()],
             type: faker.helpers.enumValue(AssortedSampleOfTypes).toString(),
             az: faker.helpers.enumValue(AZsForUSEast1).toString(),
         }
