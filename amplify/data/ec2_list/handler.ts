@@ -50,8 +50,8 @@ export const handler: FunctionHandler = async (_event, _context) => {
     for (let i = 0; i < 20; i++) {
 
         let ec2Inst: Ec2InstanceModel = {
-            createdAt: faker.date.recent().toString(),
-            updatedAt: faker.date.soon().toString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             name: faker.word.noun() + ' ' + 'server',
             id: faker.string.alpha(1) + '-' + faker.string.alphanumeric(10),
             state: faker.helpers.enumValue(States).toString(),
