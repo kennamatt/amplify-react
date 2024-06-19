@@ -47,8 +47,7 @@ export const handler: FunctionHandler = async (_event, _context) => {
 
     let list: Array<Ec2InstanceModel> = []
 
-    let count = faker.number.int({ min: 1, max: 20 })
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < 20; i++) {
 
         let ec2Inst: Ec2InstanceModel = {
             createdAt: faker.date.recent().toString(),
@@ -61,7 +60,7 @@ export const handler: FunctionHandler = async (_event, _context) => {
             type: faker.helpers.enumValue(AssortedSampleOfTypes).toString(),
             az: faker.helpers.enumValue(AZsForUSEast1).toString(),
         }
-        list.concat(ec2Inst)
+        list = list.concat(ec2Inst)
     }
 
     return list
