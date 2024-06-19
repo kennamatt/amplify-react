@@ -1,39 +1,60 @@
+import { Authenticator } from '@aws-amplify/ui-react'
+import '@aws-amplify/ui-react/styles.css'
 import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 
-const client = generateClient<Schema>();
+type Ec2Instance = Schema["Ec2InstanceModel"]["type"] | null
 
 function App() {
-  const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
+  const [ec2List, setEc2List] = useState<Array<Ec2Instance>>([]);
+  const [errMsg, setErrMsg] = useState<String>("");
 
-  useEffect(() => {
-    client.models.Todo.observeQuery().subscribe({
-      next: (data) => setTodos([...data.items]),
-    });
-  }, []);
 
-  function createTodo() {
-    client.models.Todo.create({ content: window.prompt("Todo content") });
+  function getEc2Instances() {
+    const client = generateClient<Schema>();
+    const queries = client.queries; 
+    setErrMsg( JSON.stringify(queries) )
+    return queries.ec2_list({})
   }
 
+  useEffect(
+    () => {
+      const fetchInstances = async () => {
+        const { data, errors } = await getEc2Instances()
+        if (data) {
+          setEc2List(data)
+        } else if (errors){
+          setErrMsg(errors.toString())
+        } else {
+          console.info("something up")
+        }
+      }
+      // Fire off the call asynchronously
+      fetchInstances()
+    }, []
+  );
+
   return (
-    <main>
-      <h1>My todos</h1>
-      <button onClick={createTodo}>+ new</button>
-      <ul>
-        {todos.map((todo) => (
-          <li key={todo.id}>{todo.content}</li>
-        ))}
-      </ul>
-      <div>
-        🥳 App successfully hosted. Try creating a new todo.
-        <br />
-        <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
-          Review next step of this tutorial.
-        </a>
-      </div>
-    </main>
+    <Authenticator>
+      {({ signOut }) => (
+        <main>
+          <h1>Ec2 Instances</h1>
+          <h2>{errMsg}</h2>
+          <ul>
+            {ec2List.map((ec2Inst) => {
+              if (!ec2Inst) return null
+              return (<li key={ec2Inst.id}>{ec2Inst.name}</li>)
+            })}
+          </ul>
+          <div>
+            <br />
+          </div>
+          <button onClick={signOut}>Sign out</button>
+        </main>
+
+      )}
+    </Authenticator>
   );
 }
 
