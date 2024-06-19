@@ -14,7 +14,8 @@ const schema = a.schema({
     az: a.string(), // e.g. “us-east-1b”
     public_ip: a.string(), // e.g. “54.210.167.204"
     private_ips: a.string().array()
-  }),
+  }).authorization(allow => [allow.authenticated()]),
+  
 
   ec2_list: a.query()
     .returns(a.ref('Ec2InstanceModel').array())
