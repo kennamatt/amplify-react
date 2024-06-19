@@ -1,0 +1,68 @@
+import { Handler } from 'aws-lambda';
+
+import { type Schema } from '../resource'
+import { faker } from '@faker-js/faker';
+
+type Ec2InstanceModel = Schema['Ec2InstanceModel']['type']
+type FunctionHandler = Schema["ec2_list"]['functionHandler']
+
+enum States {
+    Pending = "pending",
+    Running = "running",
+    ShuttingDown = "shutting-down",
+    Stopping = "stopping",
+    Stopped = "Stopped",
+    Terminated = "terminated",
+}
+
+enum AssortedSampleOfTypes {
+    AType = "t3a.nano",
+    BType = "c7i-flex.large",
+    CType = "m7gd.16xlarge",
+    DType = "is4gen.medium",
+    EType = "mac2.metal",
+    FType = "vt1.3xlarge",
+    GType = "hpc7g.8xlarge",
+    HType = "u-9tb1.112xlarge",
+    IType = "m7g.metal",
+    JType = "m5zn.3xlarge",
+    KType = "p5.48xlarge",
+    LType = "c5n.4xlarge",
+}
+
+enum AZsForUSEast1 {
+    A = "us-east-1a",
+    B = "us-east-1b",
+    C = "us-east-1c",
+    D = "us-east-1d",
+    E = "us-east-1e",
+    F = "us-east-1f",
+}
+
+// lambda syntax
+// Real code here... 
+// https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_ec2_code_examples.html
+// Faker code for now
+export const handler: FunctionHandler = async (_event, _context) => {
+
+    let list : Array<Ec2InstanceModel>  = []
+
+    let count = faker.number.int({ min: 1, max: 20 })
+    for( let i = 0; i < count; i++) {
+        
+        let ec2Inst : Ec2InstanceModel = {
+            createdAt: faker.date.recent().toString(),
+            updatedAt: faker.date.soon().toString(),
+            name: faker.word.noun() + ' ' + 'server',
+            id: faker.string.alpha(1) + '-' + faker.string.alphanumeric(10),
+            state: faker.helpers.enumValue(States).toString(),
+            public_ip: faker.internet.ipv4(),
+            private_ips: [faker.internet.ipv4(),faker.internet.ipv4(),faker.internet.ipv4(),faker.internet.ipv4(),faker.internet.ipv4()],
+            type: faker.helpers.enumValue(AssortedSampleOfTypes).toString(),
+            az: faker.helpers.enumValue(AZsForUSEast1).toString(),
+        }
+        list.concat(ec2Inst)
+    }
+
+    return list
+}
