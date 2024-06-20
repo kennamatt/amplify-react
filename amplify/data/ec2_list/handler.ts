@@ -4,14 +4,13 @@ import { DescribeInstancesCommand } from "@aws-sdk/client-ec2";
 
 
 import { EC2Client } from "@aws-sdk/client-ec2";
+import { Ec2Instance } from '../types';
 // TODO ask something like ENV for this
 export const REGION = "us-east-1";
 export const client = new EC2Client({ region: REGION });
 
 // Use this type to dereference the DAO's array value type from its model
 type ArrayDeref<T extends unknown[]> = T[number]
-
-type Ec2Instance = ArrayDeref<Schema["Ec2InstanceListDAO"]["type"]["list"]>
 
 type FunctionHandler = Schema["ec2List"]['functionHandler']
 type FunctionHandlerReturn = Schema["ec2List"]['returnType']

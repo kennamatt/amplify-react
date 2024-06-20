@@ -1,52 +1,53 @@
 import { Authenticator } from '@aws-amplify/ui-react'
-import { InstanceTable, Ec2Instance } from './InstanceTable';
+import { InstanceTable } from './InstanceTable';
 
 import '@aws-amplify/ui-react/styles.css'
 import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
-
+import { RequestDataType, Ec2Instance, isRequestDataType } from '../amplify/data/types';
 
 function App() {
   const [ec2List, setEc2List] = useState<Ec2Instance[]>([]);
   const [errMsg, setErrMsg] = useState<String>("");
+  const [dataType, setDataType] = useState<RequestDataType>("fake")
 
-  function getEc2Instances() {
+  // TOD0 create a toggle for dataType that fires this on change
+  async function getEc2Instances() {
     const client = generateClient<Schema>();
     const queries = client.queries;
-    return queries.ec2List({ data_type: "fake" })
-  }
+    try {
+      const { data, errors } = await queries.ec2List({ data_type: dataType })
+      if (data) {
+        // The incoming list adheres to the DAO and we could mostly use that
+        // But its probably cleaner to just slide into a better data type now
+        let list: Ec2Instance[] = data.list.filter(notNull) ?? []
+        setEc2List(list)
+        setErrMsg("")
+        if ( isRequestDataType(data.id)) {
+          setDataType(data.id)
+        }
+      } else if (errors) {
+        setErrMsg(JSON.stringify(errors))
+      } else {
+        console.error("somethings up...no data no errors")
+      }
+    } catch (e) {
+      // TFW js is still too awful for ts to hide...
+      if (e instanceof Error) {
+        setErrMsg(e.message)
+      }
+    }
 
-  // Ec2Instance filter for removing nulls from an array with explicit type predicate
-  function notNull(value: Ec2Instance | null): value is Ec2Instance {
-    return value !== null;
+    // Ec2Instance filter for removing nulls from an array with explicit type predicate
+    function notNull(value: Ec2Instance | null): value is Ec2Instance {
+      return value !== null;
+    }
   }
-
   useEffect(
     () => {
-      const fetchInstances = async () => {
-        try {
-          const { data, errors } = await getEc2Instances()
-          if (data) {
-            // The incoming list ahderes to the DAO and we could mostly use that
-            // But its probably cleaner to just slide into a better data type now
-            let list: Ec2Instance[] = data.list.filter(notNull) ?? []
-            setEc2List(list)
-            setErrMsg("")
-          } else if (errors) {
-            setErrMsg(JSON.stringify(errors))
-          } else {
-            console.error("somethings up...no data no errors")
-          }
-        } catch (e) {
-          // TFW js is still too awful for ts to hide...
-          if (e instanceof Error) {
-            setErrMsg(e.message)
-          }
-        }
-      }
       // Fire off the promise asynchronously
-      fetchInstances()
+      getEc2Instances()
     }, []
   );
 

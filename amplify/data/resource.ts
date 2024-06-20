@@ -4,8 +4,7 @@ export const ec2_list = defineFunction({
   entry: './ec2_list/handler.ts'
 });
 
-
-// Huge opportunity here to create Real DAO types that can build this from annotation, reflection and inheritence
+// Huge opportunity here to create DAO types that can build this from annotation, reflection and inheritence
 // Let's be honest, this is clunky AF and even worse to duck-type from the UI
 const schema = a.schema({
   Ec2Instance: a.customType({
@@ -30,7 +29,6 @@ const schema = a.schema({
     .handler(a.handler.function(ec2_list))
     .arguments( { data_type: a.string() } )
     .authorization(allow => [allow.authenticated()]),
-
 });
 
 export type Schema = ClientSchema<typeof schema>;

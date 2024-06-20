@@ -1,12 +1,8 @@
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 
-import type { Schema } from "../amplify/data/resource";
 import { GridInitialStateCommunity } from '@mui/x-data-grid/models/gridStateCommunity';
+import { Ec2Instance } from '../amplify/data/types';
 
-// Use this type to dereference the DAO's array value type from its model
-type ArrayDeref<T extends unknown[]> = T[number]
-
-export type Ec2Instance = Exclude<ArrayDeref<Schema["Ec2InstanceListDAO"]["type"]["list"]>, null>
 
 export interface InstanceTableProps {
     ec2list: Ec2Instance[]
