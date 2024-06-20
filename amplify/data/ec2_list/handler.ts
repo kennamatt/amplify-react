@@ -1,9 +1,14 @@
-import { Handler } from 'aws-lambda';
-
 import { type Schema } from '../resource'
 import { faker } from '@faker-js/faker';
+import { DescribeInstancesCommand } from "@aws-sdk/client-ec2";
 
-// Use this type to dereference the DAO's array Element from its model
+
+import { EC2Client } from "@aws-sdk/client-ec2";
+// TODO ask something like ENV for this
+export const REGION = "us-east-1";
+export const client = new EC2Client({ region: REGION });
+
+// Use this type to dereference the DAO's array value type from its model
 type ArrayDeref<T extends unknown[]> = T[number]
 
 type Ec2Instance = ArrayDeref<Schema["Ec2InstanceListDAO"]["type"]["list"]>
@@ -46,10 +51,55 @@ enum AZsForUSEast1 {
 }
 
 // lambda syntax
-// Real code here... 
+export const handler: FunctionHandler = async (event, _context): Promise<FunctionHandlerReturn> => {
+    if (event.arguments.data_type === "fake") {
+        return fakeHandler()
+    }
+    return realHandler()
+}
+
 // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_ec2_code_examples.html
-// Faker code for now
-export const handler: FunctionHandler = async (_event, _context) : Promise<FunctionHandlerReturn>  => {
+const realHandler = async (): Promise<FunctionHandlerReturn> => {
+    let list: Ec2Instance[] = []
+
+    const command = new DescribeInstancesCommand({
+        // No filters.  It wouldn't be hard to add a DAO that populates one
+        // But this exercise is abusing the UI for features, not the backend 
+        Filters: [],
+    });
+
+    try {
+        const { Reservations } = await client.send(command);
+        if (Reservations) {
+            Reservations.every((reservation) => {
+                reservation.Instances?.every((instance) => {
+                    let ec2Inst: Ec2Instance = {
+                        name: instance.KeyName ?? "",
+                        id: instance.InstanceId ?? "",
+                        state: instance.State?.Name ?? "",
+                        public_ip: instance.PublicIpAddress ?? "",
+                        private_ip: instance.PrivateIpAddress ?? "",
+                        type: instance.InstanceType ?? "",
+                        az: instance.Placement?.AvailabilityZone ?? "",
+                    }
+                    list = list.concat(ec2Inst)
+                })
+            })
+        }
+    } catch (err) {
+        console.error(err);
+    }
+
+    return {
+        id: "real",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        list
+    }
+
+}
+
+const fakeHandler = async (): Promise<FunctionHandlerReturn> => {
 
     let list: Ec2Instance[] = []
 
@@ -60,7 +110,7 @@ export const handler: FunctionHandler = async (_event, _context) : Promise<Funct
             id: faker.string.alpha(1) + '-' + faker.string.alphanumeric(10),
             state: faker.helpers.enumValue(States).toString(),
             public_ip: faker.internet.ipv4(),
-            private_ips: [faker.internet.ipv4(), faker.internet.ipv4(), faker.internet.ipv4(), faker.internet.ipv4(), faker.internet.ipv4()],
+            private_ip: faker.internet.ipv4(),
             type: faker.helpers.enumValue(AssortedSampleOfTypes).toString(),
             az: faker.helpers.enumValue(AZsForUSEast1).toString(),
         }
@@ -68,7 +118,7 @@ export const handler: FunctionHandler = async (_event, _context) : Promise<Funct
     }
 
     return {
-        id: "sigh",
+        id: "fake",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         list

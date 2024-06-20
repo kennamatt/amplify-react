@@ -1,15 +1,11 @@
 import { Authenticator } from '@aws-amplify/ui-react'
-import { InstanceTable } from './InstanceTable';
+import { InstanceTable, Ec2Instance } from './InstanceTable';
 
 import '@aws-amplify/ui-react/styles.css'
 import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 
-// Use this types to dereference the Schema's Nonsense type
-type ArrayDeref<T extends unknown[]> = T[number]
-
-type Ec2Instance = Exclude<ArrayDeref<Schema["Ec2InstanceListDAO"]["type"]["list"]>, null>
 
 function App() {
   const [ec2List, setEc2List] = useState<Ec2Instance[]>([]);
@@ -18,38 +14,54 @@ function App() {
   function getEc2Instances() {
     const client = generateClient<Schema>();
     const queries = client.queries;
-    return queries.ec2List({})
+    return queries.ec2List({ data_type: "fake" })
   }
 
-  function notEmpty<T>(value: T | null ): value is T {
+  // Ec2Instance filter for removing nulls from an array with explicit type predicate
+  function notNull(value: Ec2Instance | null): value is Ec2Instance {
     return value !== null;
-}
+  }
 
   useEffect(
     () => {
       const fetchInstances = async () => {
-        const { data, errors } = await getEc2Instances()
-        if (data) {
-          // Assuming there really are nulls, make them disappear
-          let list : Ec2Instance[] = data.list.filter(notEmpty) ?? []
-          setEc2List(list)
-        } else if (errors) {
-          setErrMsg(JSON.stringify(errors))
-        } else {
-          console.error("somethings up")
+        try {
+          const { data, errors } = await getEc2Instances()
+          if (data) {
+            // The incoming list ahderes to the DAO and we could mostly use that
+            // But its probably cleaner to just slide into a better data type now
+            let list: Ec2Instance[] = data.list.filter(notNull) ?? []
+            setEc2List(list)
+            setErrMsg("")
+          } else if (errors) {
+            setErrMsg(JSON.stringify(errors))
+          } else {
+            console.error("somethings up...no data no errors")
+          }
+        } catch (e) {
+          // TFW js is still too awful for ts to hide...
+          if (e instanceof Error) {
+            setErrMsg(e.message)
+          }
         }
       }
-      // Fire off the call asynchronously
+      // Fire off the promise asynchronously
       fetchInstances()
     }, []
   );
 
+  // The authenticator widgets are going to carry Amplify CSS while the 
+  // table will probably be some other less clunky pile of widgets and CSS (probably MUI)
+  // Button could go either way at this point
   return (
     <Authenticator>
       {({ signOut }) => (
         <main>
           <h1>Ec2 Instances</h1>
-          <h2>{errMsg}</h2>
+          <h2>{
+            // There's a lot of room for a better error handler than this
+            errMsg
+          }</h2>
           <InstanceTable ec2list={ec2List} />
           <div>
             <br />

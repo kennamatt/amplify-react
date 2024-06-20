@@ -3,10 +3,13 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import type { Schema } from "../amplify/data/resource";
 import { GridInitialStateCommunity } from '@mui/x-data-grid/models/gridStateCommunity';
 
-type Ec2InstanceListDAO = Schema["Ec2InstanceListDAO"]["type"]["list"]
+// Use this type to dereference the DAO's array value type from its model
+type ArrayDeref<T extends unknown[]> = T[number]
+
+export type Ec2Instance = Exclude<ArrayDeref<Schema["Ec2InstanceListDAO"]["type"]["list"]>, null>
 
 export interface InstanceTableProps {
-    ec2list: Ec2InstanceListDAO
+    ec2list: Ec2Instance[]
 }
 
 export function InstanceTable(props: InstanceTableProps): JSX.Element {
@@ -17,20 +20,20 @@ export function InstanceTable(props: InstanceTableProps): JSX.Element {
         { field: 'state', headerName: 'State', width: 140 },
         { field: 'az', headerName: 'Availability Zone', width: 150 },
         { field: 'public_ip', headerName: 'Public IP', width: 150 },
-        { field: 'private_ips', headerName: 'Private IP', width: 600 },
+        { field: 'private_ip', headerName: 'Private IP', width: 150 },
     ];
 
-    const initialState : GridInitialStateCommunity = {
+    const initialState: GridInitialStateCommunity = {
         pagination: {
             paginationModel: {
                 pageSize: 5
             }
         },
-        sorting: { 
+        sorting: {
             sortModel: [
                 { field: 'name', sort: 'asc' }
             ]
-         }
+        }
     };
 
     return (
@@ -39,7 +42,7 @@ export function InstanceTable(props: InstanceTableProps): JSX.Element {
             rows={props.ec2list}
             pagination={true}
             pageSizeOptions={[5, 10, 25]}
-            initialState={ initialState }
+            initialState={initialState}
         />
     )
 }
