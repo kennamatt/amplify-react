@@ -5,21 +5,24 @@ export const ec2_list = defineFunction({
 });
 
 const schema = a.schema({
-  // This Model isn't really what we want, but Amplify doesn't export custom types (yet)
-  Ec2InstanceModel: a.model({
-    name: a.string(), // e.g. "server 10" 
-    id: a.string(), // e.g. a-123456abcd
-    type: a.string(), // e.g. t2.medium
-    state: a.string(), // e.g. running
-    az: a.string(), // e.g. “us-east-1b”
-    public_ip: a.string(), // e.g. “54.210.167.204"
-    private_ips: a.string().array()
-  }).authorization(allow => [allow.authenticated()]),
+  Ec2Instance: a.customType({
+    name: a.string().required(), // e.g. "server 10" 
+    id: a.string().required(), // e.g. a-123456abcd
+    type: a.string().required(), // e.g. t2.medium
+    state: a.string().required(), // e.g. running
+    az: a.string().required(), // e.g. “us-east-1b”
+    public_ip: a.string().required(), // e.g. “54.210.167.204"
+    private_ips: a.string().array().required()
+  }),
   
+  // This Model isn't really what we want, but Amplify doesn't export custom types
+  // This leaves us strapped with "DB fields" like id, createdAt, updatedAt
+  Ec2InstanceListDAO: a.model({
+    list: a.ref('Ec2Instance').array().required()
+  }).authorization(allow => [allow.authenticated()]),
 
   ec2List: a.query()
-    .returns(a.ref('Ec2InstanceModel').array())
-    .arguments({})
+    .returns(a.ref('Ec2InstanceListDAO'))
     .handler(a.handler.function(ec2_list))
     .authorization(allow => [allow.authenticated()]),
 

@@ -3,8 +3,14 @@ import { Handler } from 'aws-lambda';
 import { type Schema } from '../resource'
 import { faker } from '@faker-js/faker';
 
-type Ec2InstanceModel = Schema['Ec2InstanceModel']['type']
+// Use this type to dereference the DAO's array Element from its model
+type ArrayDeref<T extends unknown[]> = T[number]
+
+type Ec2Instance = ArrayDeref<Schema["Ec2InstanceListDAO"]["type"]["list"]>
+
 type FunctionHandler = Schema["ec2List"]['functionHandler']
+type FunctionHandlerReturn = Schema["ec2List"]['returnType']
+
 
 enum States {
     Pending = "pending",
@@ -43,15 +49,13 @@ enum AZsForUSEast1 {
 // Real code here... 
 // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_ec2_code_examples.html
 // Faker code for now
-export const handler: FunctionHandler = async (_event, _context) => {
+export const handler: FunctionHandler = async (_event, _context) : Promise<FunctionHandlerReturn>  => {
 
-    let list: Array<Ec2InstanceModel> = []
+    let list: Ec2Instance[] = []
 
     for (let i = 0; i < 20; i++) {
 
-        let ec2Inst: Ec2InstanceModel = {
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+        let ec2Inst: Ec2Instance = {
             name: faker.word.noun() + ' ' + 'server',
             id: faker.string.alpha(1) + '-' + faker.string.alphanumeric(10),
             state: faker.helpers.enumValue(States).toString(),
@@ -63,5 +67,10 @@ export const handler: FunctionHandler = async (_event, _context) => {
         list = list.concat(ec2Inst)
     }
 
-    return list
+    return {
+        id: "sigh",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        list
+    }
 }
