@@ -17,7 +17,7 @@ enum States {
     Running = "running",
     ShuttingDown = "shutting-down",
     Stopping = "stopping",
-    Stopped = "Stopped",
+    Stopped = "stopped",
     Terminated = "terminated",
 }
 
