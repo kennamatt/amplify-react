@@ -10,7 +10,7 @@ import { RequestDataType, Ec2Instance, isRequestDataType } from '../amplify/data
 function App() {
   const [ec2List, setEc2List] = useState<Ec2Instance[]>([]);
   const [errMsg, setErrMsg] = useState<String>("");
-  const [dataType, setDataType] = useState<RequestDataType>("fake")
+  const [dataType, setDataType] = useState<RequestDataType>("real")
 
   // TOD0 create a toggle for dataType that fires this on change
   async function getEc2Instances() {

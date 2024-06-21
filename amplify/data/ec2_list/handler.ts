@@ -7,7 +7,6 @@ import { EC2Client } from "@aws-sdk/client-ec2";
 import { Ec2Instance } from '../types';
 // TODO ask something like ENV for this
 export const REGION = "us-east-1";
-export const client = new EC2Client({ region: REGION });
 
 // Use this type to dereference the DAO's array value type from its model
 type ArrayDeref<T extends unknown[]> = T[number]
@@ -68,6 +67,7 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
     });
 
     try {
+        const client = new EC2Client({ region: REGION });
         const { Reservations } = await client.send(command);
         if (Reservations) {
             Reservations.every((reservation) => {
@@ -85,8 +85,19 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
                 })
             })
         }
-    } catch (err) {
-        console.error(err);
+    } catch (e) {
+        if (e instanceof Error) {
+            return {
+                // For debugging?  why not?
+                id: JSON.stringify(e.stack),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                list
+            }
+        } else {
+            console.error(e);
+        }
+
     }
 
     return {

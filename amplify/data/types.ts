@@ -8,9 +8,7 @@ const REQUEST_DATA_TYPES = {
     real: "real"
 };
 
-// Practically speaking, this should proabably live in the ENV
-// but the toggle was more fun to build--this is an indicator of
-// Of what kind of data is being requested 
+// An indicator of what kind of data is being requested 
 export type RequestDataType = keyof typeof REQUEST_DATA_TYPES;
 export const isRequestDataType = (value: any): value is RequestDataType => value in REQUEST_DATA_TYPES
 
