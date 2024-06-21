@@ -1,11 +1,10 @@
 import { type Schema } from '../resource'
 import { faker } from '@faker-js/faker';
-import { DescribeInstancesCommand } from "@aws-sdk/client-ec2";
 
-
-import { EC2Client } from "@aws-sdk/client-ec2";
+import { EC2Client, DescribeInstancesCommand } from "@aws-sdk/client-ec2";
 import { Ec2Instance } from '../types';
 // TODO ask something like ENV for this
+// TODO consider iterating all the regions and accumulating those
 export const REGION = "us-east-1";
 
 // Use this type to dereference the DAO's array value type from its model
@@ -60,30 +59,34 @@ export const handler: FunctionHandler = async (event, _context): Promise<Functio
 const realHandler = async (): Promise<FunctionHandlerReturn> => {
     let list: Ec2Instance[] = []
 
-    const command = new DescribeInstancesCommand({
-        // No filters.  It wouldn't be hard to add a DAO that populates one
-        // But this exercise is abusing the UI for features, not the backend 
-        Filters: [],
-    });
+    const client = new EC2Client({ region: REGION });
+
+    let command = new DescribeInstancesCommand({});
 
     try {
-        const client = new EC2Client({ region: REGION });
-        const { Reservations } = await client.send(command);
-        if (Reservations) {
-            Reservations.every((reservation) => {
-                reservation.Instances?.every((instance) => {
-                    let ec2Inst: Ec2Instance = {
-                        name: instance.KeyName ?? "",
-                        id: instance.InstanceId ?? "",
-                        state: instance.State?.Name ?? "",
-                        public_ip: instance.PublicIpAddress ?? "",
-                        private_ip: instance.PrivateIpAddress ?? "",
-                        type: instance.InstanceType ?? "",
-                        az: instance.Placement?.AvailabilityZone ?? "",
-                    }
-                    list = list.concat(ec2Inst)
+        while (true) {
+            const { Reservations, NextToken } = await client.send(command);
+            if (Reservations) {
+                Reservations.every((reservation) => {
+                    reservation.Instances?.every((instance) => {
+                        let ec2Inst: Ec2Instance = {
+                            name: instance.KeyName ?? "",
+                            id: instance.InstanceId ?? "",
+                            state: instance.State?.Name ?? "",
+                            public_ip: instance.PublicIpAddress ?? "",
+                            private_ip: instance.PrivateIpAddress ?? "",
+                            type: instance.InstanceType ?? "",
+                            az: instance.Placement?.AvailabilityZone ?? "",
+                        }
+                        list = list.concat(ec2Inst)
+                    })
                 })
-            })
+            }
+            if( NextToken ) {
+                command = new DescribeInstancesCommand({ NextToken });
+            } else {
+                break;
+            }
         }
     } catch (e) {
         if (e instanceof Error) {
