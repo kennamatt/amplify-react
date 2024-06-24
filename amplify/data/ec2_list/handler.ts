@@ -116,6 +116,7 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
         regionNames.forEach((regionName) => {
             if (regionName) {
                 promises.concat(loadRegionPromise(regionName))
+                debug = debug.concat('adding promise for ' + regionName)
             } else {
                 debug = debug.concat('faulty region!! ')
 
