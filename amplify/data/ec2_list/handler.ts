@@ -75,17 +75,12 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
             while (true) {
                 const { Reservations, NextToken } = await regionClient.send(command)
 
-                if ("us-west-2" == region) {
-                    debug = debug.concat('us-west-2 detected')
-                    debug = debug.concat('Reservations is ' + JSON.stringify(Reservations))
-                } else {
-                    debug = debug.concat('not us-west-2 detected: ' + region)
-
-                }
-
-
                 Reservations?.every((reservation) => {
                     reservation.Instances?.every((instance) => {
+                        if (instance.Tags) {
+                            debug = debug.concat(JSON.stringify(instance.Tags))
+                        }
+
                         const ec2Inst: Ec2Instance = {
                             name: instance.Tags?.find((tag) => { tag.Key === "Name" })?.Value ?? "",
                             id: instance.InstanceId ?? "",
@@ -98,10 +93,6 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
                         regionList = regionList.concat(ec2Inst)
                     })
                 })
-
-                if ("us-west-2" == region) {
-                    debug = debug.concat('NextToken is ' + NextToken)
-                }
 
                 if (NextToken) {
                     command = new DescribeInstancesCommand({ NextToken });
@@ -116,19 +107,9 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
         regionNames.forEach((regionName) => {
             if (regionName) {
                 promises = promises.concat(loadRegionPromise(regionName))
-                debug = debug.concat('adding promise for ' + regionName)
-            } else {
-                debug = debug.concat('faulty region!! ')
-
             }
         })
-
-        debug = debug.concat('promises')
-        debug = debug.concat(JSON.stringify(promises))
-
         let all = await Promise.all(promises)
-        debug = debug.concat('all')
-        debug = debug.concat(JSON.stringify(all))
         returnList = (all).flat()
 
     } catch (e) {
@@ -140,7 +121,7 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 list: [],
-              //  debug: JSON.stringify(e.stack),
+                debug: JSON.stringify(e.stack),
             }
         }
         console.error(e);
