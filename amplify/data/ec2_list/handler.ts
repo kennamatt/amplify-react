@@ -55,8 +55,7 @@ export const handler: FunctionHandler = async (event, _context): Promise<Functio
 
 // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_ec2_code_examples.html
 const realHandler = async (): Promise<FunctionHandlerReturn> => {
-
-    let list: Ec2Instance[] = []
+    const returnList: Ec2Instance[] = []
 
     try {
         let command = new DescribeInstancesCommand({});
@@ -64,58 +63,75 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
         const regions = await client.send(new DescribeRegionsCommand({}))
 
         const regionNames = regions.Regions?.map((region) => region.RegionName) ?? []
-        // Skip nested promise complexity by just iterating the regions instead of mapping them
+        // Query every region as its own promise
+        const promises: Promise<Ec2Instance[]>[] = []
         for (var i = 0; i < regionNames.length; i++) {
-            // These client calls may paginate naturally 
-            // (dynamo packets need to be reassumbled, this probably does too).
-            const regionClient = new EC2Client({ region: regionNames[i] });
-            const { Reservations, NextToken } = await regionClient.send(command);
-            while (true) {
+            promises.concat(
+                new Promise<Ec2Instance[]>(async (resolve, reject) => {
+                    // These client calls may paginate naturally
+                    // (dynamo packets need to be reassembled, this probably does too).
+                    const regionClient = new EC2Client({ region: regionNames[i] });
 
-                if (Reservations) {
-                    Reservations.every((reservation) => {
-                        reservation.Instances?.every((instance) => {
-                            let ec2Inst: Ec2Instance = {
-                                name: instance.Tags?.find((tag) => { tag.Key === "Name" })?.Value ?? "",
-                                id: instance.InstanceId ?? "",
-                                state: instance.State?.Name ?? "",
-                                public_ip: instance.PublicIpAddress ?? "",
-                                private_ip: instance.PrivateIpAddress ?? "",
-                                type: instance.InstanceType ?? "",
-                                az: instance.Placement?.AvailabilityZone ?? "",
+                    try {
+                        const { Reservations, NextToken } = await regionClient.send(command)
+                        let regionList: Ec2Instance[] = []
+                        // We might be able to "async" around the specific reservations this a little bit, 
+                        // but becasue of the NextToken dependency, it winds up being relatively serial 
+                        while (true) {
+
+                            if (Reservations) {
+                                Reservations.every((reservation) => {
+                                    reservation.Instances?.every((instance) => {
+                                        let ec2Inst: Ec2Instance = {
+                                            name: instance.Tags?.find((tag) => { tag.Key === "Name" })?.Value ?? "",
+                                            id: instance.InstanceId ?? "",
+                                            state: instance.State?.Name ?? "",
+                                            public_ip: instance.PublicIpAddress ?? "",
+                                            private_ip: instance.PrivateIpAddress ?? "",
+                                            type: instance.InstanceType ?? "",
+                                            az: instance.Placement?.AvailabilityZone ?? "",
+                                        }
+                                        regionList = regionList.concat(ec2Inst)
+                                    })
+                                })
                             }
-                            list = list.concat(ec2Inst)
-                        })
-                    })
-                }
 
-                if (NextToken) {
-                    command = new DescribeInstancesCommand({ NextToken });
-                } else {
-                    break;
-                }
-            }
+                            if (NextToken) {
+                                command = new DescribeInstancesCommand({ NextToken });
+                            } else {
+                                break;
+                            }
+                        }
+                        resolve(regionList)
+                    } catch (e) {
+                        reject(e)
+                    }
+                })
+            );
         }
-
+        var promiseResults = await Promise.all(promises)
+        returnList.concat(...promiseResults)
+    
     } catch (e) {
         if (e instanceof Error) {
             return {
-                // For debugging a prototype, sure...this is a bad idea for anything production quaity
+                // For debugging a prototype, sure...this is a bad idea for anything production tho
                 id: JSON.stringify(e.stack),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                list
+                list: []
             }
-        } else {
-            console.error(e);
         }
+        console.error(e);
+
     }
+
 
     return {
         id: "real",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        list
+        list: returnList
     }
 }
 
