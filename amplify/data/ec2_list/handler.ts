@@ -80,9 +80,13 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
                         if (instance.Tags) {
                             debug = debug.concat(JSON.stringify(instance.Tags))
                         }
+                        const nameTag = instance.Tags?.find((tag) => tag.Key === 'Name')
+                        if (nameTag) {
+                            debug = debug.concat(nameTag?.Value ?? 'tag exists--not value')
+                        }
 
                         const ec2Inst: Ec2Instance = {
-                            name: instance.Tags?.find((tag) => { tag.Key === "Name" })?.Value ?? "",
+                            name: nameTag?.Value ?? "",
                             id: instance.InstanceId ?? "",
                             state: instance.State?.Name ?? "",
                             public_ip: instance.PublicIpAddress ?? "",
