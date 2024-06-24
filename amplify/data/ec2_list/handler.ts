@@ -63,8 +63,6 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
         const regionNames = Regions?.map((region) => region.RegionName) ?? []
 
         const loadRegionPromise = async (region: string): Promise<Ec2Instance[]> => {
-            debug = debug.concat('region: ' + region)
-
             let regionList: Ec2Instance[] = []
 
             const regionClient = new EC2Client({ region });
@@ -79,10 +77,13 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
 
                 if ("us-west-2" == region) {
                     debug = debug.concat('us-west-2 detected')
-                    debug = debug.concat('Reservations is ' + JSON.stringify(Reservations) )
+                    debug = debug.concat('Reservations is ' + JSON.stringify(Reservations))
+                } else {
+                    debug = debug.concat('not us-west-2 detected: ' + region)
+
                 }
 
-                
+
                 Reservations?.every((reservation) => {
                     reservation.Instances?.every((instance) => {
                         const ec2Inst: Ec2Instance = {
@@ -97,9 +98,9 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
                         regionList = regionList.concat(ec2Inst)
                     })
                 })
-            
+
                 if ("us-west-2" == region) {
-                    debug = debug.concat('NextToken is ' + NextToken )
+                    debug = debug.concat('NextToken is ' + NextToken)
                 }
 
                 if (NextToken) {
