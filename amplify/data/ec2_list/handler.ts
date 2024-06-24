@@ -75,23 +75,21 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
             // (dynamo packets need to be reassembled, this probably does too).
             while (true) {
                 const { Reservations, NextToken } = await regionClient.send(command)
-                if (Reservations) {
-                    Reservations.every((reservation) => {
-                        reservation.Instances?.every((instance) => {
-                            const ec2Inst: Ec2Instance = {
-                                name: instance.Tags?.find((tag) => { tag.Key === "Name" })?.Value ?? "",
-                                id: instance.InstanceId ?? "",
-                                state: instance.State?.Name ?? "",
-                                public_ip: instance.PublicIpAddress ?? "",
-                                private_ip: instance.PrivateIpAddress ?? "",
-                                type: instance.InstanceType ?? "",
-                                az: instance.Placement?.AvailabilityZone ?? "",
-                            }
-                            regionList = regionList.concat(ec2Inst)
-                        })
+                Reservations?.every((reservation) => {
+                    reservation.Instances?.every((instance) => {
+                        const ec2Inst: Ec2Instance = {
+                            name: instance.Tags?.find((tag) => { tag.Key === "Name" })?.Value ?? "",
+                            id: instance.InstanceId ?? "",
+                            state: instance.State?.Name ?? "",
+                            public_ip: instance.PublicIpAddress ?? "",
+                            private_ip: instance.PrivateIpAddress ?? "",
+                            type: instance.InstanceType ?? "",
+                            az: instance.Placement?.AvailabilityZone ?? "",
+                        }
+                        regionList = regionList.concat(ec2Inst)
                     })
-                }
-
+                })
+            
                 if (NextToken) {
                     command = new DescribeInstancesCommand({ NextToken });
                 } else {
