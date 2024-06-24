@@ -1,13 +1,11 @@
 import { type Schema } from '../resource'
 import { faker } from '@faker-js/faker';
-import { promisify } from 'util'
 
 import { EC2Client, DescribeInstancesCommand, DescribeRegionsCommand } from "@aws-sdk/client-ec2";
 import { Ec2Instance } from '../types';
 // TODO ask something like ENV for this--tho it probably doesn't matter
 // as we're just picking 1 to list all of them
 export const REGION = "us-east-1";
-const client = new EC2Client({ region: REGION });
 
 type FunctionHandler = Schema["ec2List"]['functionHandler']
 type FunctionHandlerReturn = Schema["ec2List"]['returnType']
@@ -57,17 +55,18 @@ export const handler: FunctionHandler = async (event, _context): Promise<Functio
 // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_ec2_code_examples.html
 const realHandler = async (): Promise<FunctionHandlerReturn> => {
     let returnList: Ec2Instance[] = []
-    let command = new DescribeInstancesCommand({});
-    let regionNames: (string|undefined)[] = []
+    let debug: string[] = []
     try {
-        const regions = await client.send(new DescribeRegionsCommand({}))
+        const client = new EC2Client({ region: REGION });
+        const { Regions } = await client.send(new DescribeRegionsCommand({}))
 
-        regionNames = regions.Regions?.map((region) => region.RegionName) ?? []
-        const promises: Promise<Ec2Instance[]>[] = []
+        const regionNames = Regions?.map((region) => region.RegionName) ?? []
 
         const loadRegionPromise = async (region: string): Promise<Ec2Instance[]> => {
             let regionList: Ec2Instance[] = []
+
             const regionClient = new EC2Client({ region });
+            let command = new DescribeInstancesCommand({});
 
             // We might be able to "async" around the specific reservations, 
             // but becasue of the NextToken dependency, it winds up being relatively serial 
@@ -75,6 +74,13 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
             // (dynamo packets need to be reassembled, this probably does too).
             while (true) {
                 const { Reservations, NextToken } = await regionClient.send(command)
+
+                if ("us-west-2" == region) {
+                    debug = debug.concat('us-west-2 detected')
+                    debug = debug.concat('Reservations is ' + JSON.stringify(Reservations) )
+                }
+
+                
                 Reservations?.every((reservation) => {
                     reservation.Instances?.every((instance) => {
                         const ec2Inst: Ec2Instance = {
@@ -90,6 +96,10 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
                     })
                 })
             
+                if ("us-west-2" == region) {
+                    debug = debug.concat('NextToken is ' + NextToken )
+                }
+
                 if (NextToken) {
                     command = new DescribeInstancesCommand({ NextToken });
                 } else {
@@ -99,6 +109,7 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
             return regionList
         }
 
+        const promises: Promise<Ec2Instance[]>[] = []
         regionNames.forEach((regionName) => {
             if (regionName) {
                 promises.concat(loadRegionPromise(regionName))
@@ -127,7 +138,7 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         list: returnList,
-        debug: JSON.stringify(regionNames),
+        debug: JSON.stringify(debug),
     }
 }
 
