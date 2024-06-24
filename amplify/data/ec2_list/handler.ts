@@ -55,7 +55,7 @@ export const handler: FunctionHandler = async (event, _context): Promise<Functio
 
 // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_ec2_code_examples.html
 const realHandler = async (): Promise<FunctionHandlerReturn> => {
-    const returnList: Ec2Instance[] = []
+    let returnList: Ec2Instance[] = []
 
     try {
         let command = new DescribeInstancesCommand({});
@@ -109,8 +109,8 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
                 })
             );
         }
-        var promiseResults = await Promise.all(promises)
-        returnList.concat(...promiseResults)
+        const promiseResults = await Promise.all(promises)
+        returnList = returnList.concat(...promiseResults)
     
     } catch (e) {
         if (e instanceof Error) {
