@@ -4,11 +4,8 @@ import { faker } from '@faker-js/faker';
 import { EC2Client, DescribeInstancesCommand } from "@aws-sdk/client-ec2";
 import { Ec2Instance } from '../types';
 // TODO ask something like ENV for this
-// TODO consider iterating all the regions and accumulating those
 export const REGION = "us-east-1";
 
-// Use this type to dereference the DAO's array value type from its model
-type ArrayDeref<T extends unknown[]> = T[number]
 
 type FunctionHandler = Schema["ec2List"]['functionHandler']
 type FunctionHandlerReturn = Schema["ec2List"]['returnType']
@@ -64,13 +61,16 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
     let command = new DescribeInstancesCommand({});
 
     try {
+        // These client calls may paginate naturally 
+        // (dynamo packets need to be reassumbled, this probably does too).
         while (true) {
             const { Reservations, NextToken } = await client.send(command);
+
             if (Reservations) {
                 Reservations.every((reservation) => {
                     reservation.Instances?.every((instance) => {
                         let ec2Inst: Ec2Instance = {
-                            name: instance.KeyName ?? "",
+                            name: instance.Tags?.find((tag) => { tag.Key === "Name" })?.Value ?? "",
                             id: instance.InstanceId ?? "",
                             state: instance.State?.Name ?? "",
                             public_ip: instance.PublicIpAddress ?? "",
@@ -82,6 +82,7 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
                     })
                 })
             }
+
             if( NextToken ) {
                 command = new DescribeInstancesCommand({ NextToken });
             } else {
@@ -109,7 +110,6 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
         updatedAt: new Date().toISOString(),
         list
     }
-
 }
 
 const fakeHandler = async (): Promise<FunctionHandlerReturn> => {
