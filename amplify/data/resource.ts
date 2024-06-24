@@ -14,14 +14,15 @@ const schema = a.schema({
     state: a.string().required(), // e.g. running
     az: a.string().required(), // e.g. “us-east-1b”
     public_ip: a.string().required(), // e.g. “54.210.167.204"
-    private_ip: a.string().required()
+    private_ip: a.string().required(),
   }),
   
   // This Model isn't really what we want, but Amplify doesn't export custom types
   // This leaves us strapped with a backing DB for this and convenience methonds on it
   // as well as "required DB fields" like id, createdAt, updatedAt, but whatever.  POC/prototype
   Ec2InstanceListDAO: a.model({
-    list: a.ref('Ec2Instance').array().required()
+    list: a.ref('Ec2Instance').array().required(),
+    debug: a.string(),
   }).authorization(allow => [allow.authenticated()]),
 
   ec2List: a.query()

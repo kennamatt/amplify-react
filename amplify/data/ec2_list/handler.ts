@@ -58,11 +58,11 @@ export const handler: FunctionHandler = async (event, _context): Promise<Functio
 const realHandler = async (): Promise<FunctionHandlerReturn> => {
     let returnList: Ec2Instance[] = []
     let command = new DescribeInstancesCommand({});
-
+    let regionNames: (string|undefined)[] = []
     try {
         const regions = await client.send(new DescribeRegionsCommand({}))
 
-        const regionNames = regions.Regions?.map((region) => region.RegionName) ?? []
+        regionNames = regions.Regions?.map((region) => region.RegionName) ?? []
         const promises: Promise<Ec2Instance[]>[] = []
 
         const loadRegionPromise = async (region: string): Promise<Ec2Instance[]> => {
@@ -112,10 +112,11 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
             return {
                 // For debugging a prototype, sure...this is a bad idea for anything production tho
                 // and would do well to define a shape and handlers for errors 
-                id: JSON.stringify(e.stack),
+                id: 'error',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                list: []
+                list: [],
+                debug: JSON.stringify(e.stack),
             }
         }
         console.error(e);
@@ -125,7 +126,8 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
         id: "real",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        list: returnList
+        list: returnList,
+        debug: JSON.stringify(regionNames),
     }
 }
 
