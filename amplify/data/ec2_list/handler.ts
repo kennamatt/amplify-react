@@ -123,7 +123,13 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
             }
         })
 
-        returnList = (await Promise.all(promises)).flat()
+        debug = debug.concat('promises')
+        debug = debug.concat(JSON.stringify(promises))
+
+        let all = await Promise.all(promises)
+        debug = debug.concat('all')
+        debug = debug.concat(JSON.stringify(all))
+        returnList = (all).flat()
 
     } catch (e) {
         if (e instanceof Error) {
