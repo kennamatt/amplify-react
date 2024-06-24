@@ -112,10 +112,10 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
             return regionList
         }
 
-        const promises: Promise<Ec2Instance[]>[] = []
+        let promises: Promise<Ec2Instance[]>[] = []
         regionNames.forEach((regionName) => {
             if (regionName) {
-                promises.concat(loadRegionPromise(regionName))
+                promises = promises.concat(loadRegionPromise(regionName))
                 debug = debug.concat('adding promise for ' + regionName)
             } else {
                 debug = debug.concat('faulty region!! ')
@@ -140,7 +140,7 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 list: [],
-                debug: JSON.stringify(e.stack),
+              //  debug: JSON.stringify(e.stack),
             }
         }
         console.error(e);
