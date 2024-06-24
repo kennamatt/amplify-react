@@ -1,11 +1,12 @@
 import { type Schema } from '../resource'
 import { faker } from '@faker-js/faker';
 
-import { EC2Client, DescribeInstancesCommand } from "@aws-sdk/client-ec2";
+import { EC2Client, DescribeInstancesCommand, DescribeRegionsCommand } from "@aws-sdk/client-ec2";
 import { Ec2Instance } from '../types';
+import { RegionInfo } from 'aws-cdk-lib/region-info';
 // TODO ask something like ENV for this
 export const REGION = "us-east-1";
-
+const client = new EC2Client({ region: REGION });
 
 type FunctionHandler = Schema["ec2List"]['functionHandler']
 type FunctionHandlerReturn = Schema["ec2List"]['returnType']
@@ -54,45 +55,52 @@ export const handler: FunctionHandler = async (event, _context): Promise<Functio
 
 // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_ec2_code_examples.html
 const realHandler = async (): Promise<FunctionHandlerReturn> => {
+
     let list: Ec2Instance[] = []
 
-    const client = new EC2Client({ region: REGION });
-
-    let command = new DescribeInstancesCommand({});
-
     try {
-        // These client calls may paginate naturally 
-        // (dynamo packets need to be reassumbled, this probably does too).
-        while (true) {
-            const { Reservations, NextToken } = await client.send(command);
+        let command = new DescribeInstancesCommand({});
 
-            if (Reservations) {
-                Reservations.every((reservation) => {
-                    reservation.Instances?.every((instance) => {
-                        let ec2Inst: Ec2Instance = {
-                            name: instance.Tags?.find((tag) => { tag.Key === "Name" })?.Value ?? "",
-                            id: instance.InstanceId ?? "",
-                            state: instance.State?.Name ?? "",
-                            public_ip: instance.PublicIpAddress ?? "",
-                            private_ip: instance.PrivateIpAddress ?? "",
-                            type: instance.InstanceType ?? "",
-                            az: instance.Placement?.AvailabilityZone ?? "",
-                        }
-                        list = list.concat(ec2Inst)
+        const regions = await client.send(new DescribeRegionsCommand({}))
+
+        const regionNames = regions.Regions?.map((region) => region.RegionName) ?? []
+        // Skip nested promise complexity by just iterating the regions instead of mapping them
+        for (var i = 0; i < regionNames.length; i++) {
+            // These client calls may paginate naturally 
+            // (dynamo packets need to be reassumbled, this probably does too).
+            const regionClient = new EC2Client({ region: regionNames[i] });
+            const { Reservations, NextToken } = await regionClient.send(command);
+            while (true) {
+
+                if (Reservations) {
+                    Reservations.every((reservation) => {
+                        reservation.Instances?.every((instance) => {
+                            let ec2Inst: Ec2Instance = {
+                                name: instance.Tags?.find((tag) => { tag.Key === "Name" })?.Value ?? "",
+                                id: instance.InstanceId ?? "",
+                                state: instance.State?.Name ?? "",
+                                public_ip: instance.PublicIpAddress ?? "",
+                                private_ip: instance.PrivateIpAddress ?? "",
+                                type: instance.InstanceType ?? "",
+                                az: instance.Placement?.AvailabilityZone ?? "",
+                            }
+                            list = list.concat(ec2Inst)
+                        })
                     })
-                })
-            }
+                }
 
-            if( NextToken ) {
-                command = new DescribeInstancesCommand({ NextToken });
-            } else {
-                break;
+                if (NextToken) {
+                    command = new DescribeInstancesCommand({ NextToken });
+                } else {
+                    break;
+                }
             }
         }
+
     } catch (e) {
         if (e instanceof Error) {
             return {
-                // For debugging?  why not?
+                // For debugging a prototype, sure...this is a bad idea for anything production quaity
                 id: JSON.stringify(e.stack),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -101,7 +109,6 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
         } else {
             console.error(e);
         }
-
     }
 
     return {
