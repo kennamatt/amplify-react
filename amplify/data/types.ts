@@ -10,7 +10,7 @@ const REQUEST_DATA_TYPES = {
 
 // An indicator of what kind of data is being requested 
 export type RequestDataType = keyof typeof REQUEST_DATA_TYPES;
-export const isRequestDataType = (value: any): value is RequestDataType => value in REQUEST_DATA_TYPES
+export const isRequestDataType = (value: string): value is RequestDataType => value in REQUEST_DATA_TYPES
 
 // Use this type to dereference the DAO's array value type from its model
 type ArrayDeref<T extends unknown[]> = T[number]

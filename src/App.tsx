@@ -9,7 +9,7 @@ import { RequestDataType, Ec2Instance, isRequestDataType } from '../amplify/data
 
 function App() {
   const [ec2List, setEc2List] = useState<Ec2Instance[]>([]);
-  const [errMsg, setErrMsg] = useState<String>("");
+  const [errMsg, setErrMsg] = useState<string>("");
   const [dataType, setDataType] = useState<RequestDataType>("real")
 
   // TOD0 create a toggle for dataType that fires this on change
@@ -21,7 +21,7 @@ function App() {
       if (data) {
         // The incoming list adheres to the DAO and we could mostly use that
         // But its probably cleaner to just slide into a better data type now
-        let list: Ec2Instance[] = data.list.filter(notNull) ?? []
+        const list: Ec2Instance[] = data.list.filter(notNull) ?? []
         setEc2List(list)
         setErrMsg("")
         if ( isRequestDataType(data.id)) {

@@ -1,10 +1,11 @@
 import { type Schema } from '../resource'
 import { faker } from '@faker-js/faker';
+import { promisify } from 'util'
 
 import { EC2Client, DescribeInstancesCommand, DescribeRegionsCommand } from "@aws-sdk/client-ec2";
 import { Ec2Instance } from '../types';
-import { RegionInfo } from 'aws-cdk-lib/region-info';
-// TODO ask something like ENV for this
+// TODO ask something like ENV for this--tho it probably doesn't matter
+// as we're just picking 1 to list all of them
 export const REGION = "us-east-1";
 const client = new EC2Client({ region: REGION });
 
@@ -56,66 +57,63 @@ export const handler: FunctionHandler = async (event, _context): Promise<Functio
 // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_ec2_code_examples.html
 const realHandler = async (): Promise<FunctionHandlerReturn> => {
     let returnList: Ec2Instance[] = []
+    let command = new DescribeInstancesCommand({});
 
     try {
-        let command = new DescribeInstancesCommand({});
-
         const regions = await client.send(new DescribeRegionsCommand({}))
 
         const regionNames = regions.Regions?.map((region) => region.RegionName) ?? []
-        // Query every region as its own promise
         const promises: Promise<Ec2Instance[]>[] = []
-        for (var i = 0; i < regionNames.length; i++) {
-            promises.concat(
-                new Promise<Ec2Instance[]>(async (resolve, reject) => {
-                    // These client calls may paginate naturally
-                    // (dynamo packets need to be reassembled, this probably does too).
-                    const regionClient = new EC2Client({ region: regionNames[i] });
 
-                    try {
-                        const { Reservations, NextToken } = await regionClient.send(command)
-                        let regionList: Ec2Instance[] = []
-                        // We might be able to "async" around the specific reservations this a little bit, 
-                        // but becasue of the NextToken dependency, it winds up being relatively serial 
-                        while (true) {
+        const loadRegionPromise = async (region: string): Promise<Ec2Instance[]> => {
+            let regionList: Ec2Instance[] = []
+            const regionClient = new EC2Client({ region });
 
-                            if (Reservations) {
-                                Reservations.every((reservation) => {
-                                    reservation.Instances?.every((instance) => {
-                                        let ec2Inst: Ec2Instance = {
-                                            name: instance.Tags?.find((tag) => { tag.Key === "Name" })?.Value ?? "",
-                                            id: instance.InstanceId ?? "",
-                                            state: instance.State?.Name ?? "",
-                                            public_ip: instance.PublicIpAddress ?? "",
-                                            private_ip: instance.PrivateIpAddress ?? "",
-                                            type: instance.InstanceType ?? "",
-                                            az: instance.Placement?.AvailabilityZone ?? "",
-                                        }
-                                        regionList = regionList.concat(ec2Inst)
-                                    })
-                                })
+            // We might be able to "async" around the specific reservations, 
+            // but becasue of the NextToken dependency, it winds up being relatively serial 
+            // These client calls may paginate naturally
+            // (dynamo packets need to be reassembled, this probably does too).
+            while (true) {
+                const { Reservations, NextToken } = await regionClient.send(command)
+                if (Reservations) {
+                    Reservations.every((reservation) => {
+                        reservation.Instances?.every((instance) => {
+                            const ec2Inst: Ec2Instance = {
+                                name: instance.Tags?.find((tag) => { tag.Key === "Name" })?.Value ?? "",
+                                id: instance.InstanceId ?? "",
+                                state: instance.State?.Name ?? "",
+                                public_ip: instance.PublicIpAddress ?? "",
+                                private_ip: instance.PrivateIpAddress ?? "",
+                                type: instance.InstanceType ?? "",
+                                az: instance.Placement?.AvailabilityZone ?? "",
                             }
+                            regionList = regionList.concat(ec2Inst)
+                        })
+                    })
+                }
 
-                            if (NextToken) {
-                                command = new DescribeInstancesCommand({ NextToken });
-                            } else {
-                                break;
-                            }
-                        }
-                        resolve(regionList)
-                    } catch (e) {
-                        reject(e)
-                    }
-                })
-            );
+                if (NextToken) {
+                    command = new DescribeInstancesCommand({ NextToken });
+                } else {
+                    break;
+                }
+            }
+            return regionList
         }
-        const promiseResults = await Promise.all(promises)
-        returnList = returnList.concat(...promiseResults)
-    
+
+        regionNames.forEach((regionName) => {
+            if (regionName) {
+                promises.concat(loadRegionPromise(regionName))
+            }
+        })
+
+        returnList = (await Promise.all(promises)).flat()
+
     } catch (e) {
         if (e instanceof Error) {
             return {
                 // For debugging a prototype, sure...this is a bad idea for anything production tho
+                // and would do well to define a shape and handlers for errors 
                 id: JSON.stringify(e.stack),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -123,9 +121,7 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
             }
         }
         console.error(e);
-
     }
-
 
     return {
         id: "real",
@@ -141,7 +137,7 @@ const fakeHandler = async (): Promise<FunctionHandlerReturn> => {
 
     for (let i = 0; i < 20; i++) {
 
-        let ec2Inst: Ec2Instance = {
+        const ec2Inst: Ec2Instance = {
             name: faker.word.noun() + ' ' + 'server',
             id: faker.string.alpha(1) + '-' + faker.string.alphanumeric(10),
             state: faker.helpers.enumValue(States).toString(),
