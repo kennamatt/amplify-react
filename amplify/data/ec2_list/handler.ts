@@ -63,6 +63,8 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
         const regionNames = Regions?.map((region) => region.RegionName) ?? []
 
         const loadRegionPromise = async (region: string): Promise<Ec2Instance[]> => {
+            debug = debug.concat('region: ' + region)
+
             let regionList: Ec2Instance[] = []
 
             const regionClient = new EC2Client({ region });
@@ -113,6 +115,9 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
         regionNames.forEach((regionName) => {
             if (regionName) {
                 promises.concat(loadRegionPromise(regionName))
+            } else {
+                debug = debug.concat('faulty region!! ')
+
             }
         })
 
