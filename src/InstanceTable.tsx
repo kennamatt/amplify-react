@@ -34,6 +34,7 @@ export function InstanceTable(props: InstanceTableProps): JSX.Element {
 
     return (
         <DataGrid
+            loading={props.ec2list.length == 0}
             columns={columns}
             rows={props.ec2list}
             pagination={true}

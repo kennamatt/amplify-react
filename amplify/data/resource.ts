@@ -22,7 +22,6 @@ const schema = a.schema({
   // as well as "required DB fields" like id, createdAt, updatedAt, but whatever.  POC/prototype
   Ec2InstanceListDAO: a.model({
     list: a.ref('Ec2Instance').array().required(),
-    debug: a.string(),
   }).authorization(allow => [allow.authenticated()]),
 
   ec2List: a.query()

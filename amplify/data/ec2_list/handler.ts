@@ -55,7 +55,6 @@ export const handler: FunctionHandler = async (event, _context): Promise<Functio
 // https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_ec2_code_examples.html
 const realHandler = async (): Promise<FunctionHandlerReturn> => {
     let returnList: Ec2Instance[] = []
-    let debug: string[] = []
     try {
         const client = new EC2Client({ region: REGION });
         const { Regions } = await client.send(new DescribeRegionsCommand({}))
@@ -77,14 +76,7 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
 
                 Reservations?.every((reservation) => {
                     reservation.Instances?.every((instance) => {
-                        if (instance.Tags) {
-                            debug = debug.concat(JSON.stringify(instance.Tags))
-                        }
                         const nameTag = instance.Tags?.find((tag) => tag.Key === 'Name')
-                        if (nameTag) {
-                            debug = debug.concat(nameTag?.Value ?? 'tag exists--not value')
-                        }
-
                         const ec2Inst: Ec2Instance = {
                             name: nameTag?.Value ?? "",
                             id: instance.InstanceId ?? "",
@@ -125,7 +117,6 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 list: [],
-                debug: JSON.stringify(e.stack),
             }
         }
         console.error(e);
@@ -136,7 +127,6 @@ const realHandler = async (): Promise<FunctionHandlerReturn> => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         list: returnList,
-        debug: JSON.stringify(debug),
     }
 }
 
