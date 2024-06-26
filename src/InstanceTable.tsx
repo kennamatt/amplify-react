@@ -2,9 +2,11 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 
 import { GridInitialStateCommunity } from '@mui/x-data-grid/models/gridStateCommunity';
 import { Ec2Instance } from '../amplify/data/types';
+import { GlobalStyles } from '@mui/material';
 
 
 export interface InstanceTableProps {
+    loading: boolean
     ec2list: Ec2Instance[]
 }
 
@@ -32,14 +34,26 @@ export function InstanceTable(props: InstanceTableProps): JSX.Element {
         }
     };
 
-    return (
+
+    return (<>
+        <GlobalStyles styles={{
+            // Fix visibility conflicts between MUI popups (spawned by, but not children of; the DataGrid component)
+            // and amplify--using a MUI component as other CSS will be overridden (yes, its hacky)
+            '.MuiList-root': {
+                'backgroundColor': 'whitesmoke',
+                'color': 'darkviolet',
+                'padding': '6px',
+            }
+        }} />
         <DataGrid
-            loading={props.ec2list.length == 0}
+            loading={props.loading}
             columns={columns}
             rows={props.ec2list}
             pagination={true}
             pageSizeOptions={[5, 10, 25]}
             initialState={initialState}
+
         />
+    </>
     )
 }

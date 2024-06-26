@@ -11,6 +11,7 @@ function App() {
   const [ec2List, setEc2List] = useState<Ec2Instance[]>([]);
   const [errMsg, setErrMsg] = useState<string>("");
   const [dataType, setDataType] = useState<RequestDataType>("real")
+  const [loading, setLoading] = useState<boolean>(true)
 
   // TOD0 create a toggle for dataType that fires this on change
   async function getEc2Instances() {
@@ -27,6 +28,7 @@ function App() {
         if ( isRequestDataType(data.id)) {
           setDataType(data.id)
         }
+        setLoading(false)
       } else if (errors) {
         setErrMsg(JSON.stringify(errors))
       } else {
@@ -63,7 +65,7 @@ function App() {
             // There's a lot of room for a better error handler than this
             errMsg
           }</h2>
-          <InstanceTable ec2list={ec2List} />
+          <InstanceTable ec2list={ec2List} loading={loading} />
           <div>
             <br />
           </div>
