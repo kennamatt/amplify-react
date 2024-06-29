@@ -3,6 +3,7 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { GridInitialStateCommunity } from '@mui/x-data-grid/models/gridStateCommunity';
 import { Ec2Instance } from '../amplify/data/types';
 import { GlobalStyles } from '@mui/material';
+import React from 'react';
 
 
 export interface InstanceTableProps {
